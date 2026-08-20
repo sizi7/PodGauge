@@ -95,7 +95,10 @@ private fun LookingForAirPods() {
 
 @Composable
 private fun AirPodsContent(state: AirPodsBatteryState) {
-    Text(state.model.displayName(), style = MaterialTheme.typography.headlineSmall)
+    Text(
+        text = state.deviceName ?: state.model.displayName(),
+        style = MaterialTheme.typography.headlineSmall,
+    )
     Spacer(Modifier.height(20.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -140,6 +143,7 @@ private val fakeState = AirPodsBatteryState(
     caseCharging = true,
     model = AirPodsModel.AIRPODS_PRO_2,
     timestamp = 1_750_000_000_000L,
+    deviceName = "My AirPods Pro",
 )
 
 @Preview(showBackground = true, showSystemUi = true)

@@ -9,4 +9,5 @@ data class AirPodsBatteryState(
     val caseCharging: Boolean?,
     val model: AirPodsModel,
     val timestamp: Long,
+    val deviceName: String? = null,
 )

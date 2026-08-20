@@ -29,6 +29,7 @@ left/right/case 배터리는 파싱하며, 해석이 더 필요한 충전 여부
 - parser 단위 테스트 작성 및 통과
 - Galaxy SM-S936N에서 Apple manufacturer data 수신 및 `07 0F` AirPods 패킷 감지 확인
 - 실제 캡처 기반 모델 ID(`0E20` = AirPods Pro) 및 배터리 nibble 파싱 구현
+- 광고 이름, Bluetooth 등록 이름/별칭, 페어링된 AirPods 이름 순서의 기기명 표시 구현
 - Debug APK 빌드 및 Android Lint 통과
 
 ## 3. 미완료 작업
@@ -36,6 +37,7 @@ left/right/case 배터리는 파싱하며, 해석이 더 필요한 충전 여부
 - 실제 패킷에 근거한 left/right/case charging bit 파싱
 - AirPods Pro 외 모델의 model identifier와 배터리 방향 실기기 교차 검증
 - Galaxy 실기기에서 권한 요청, Bluetooth 토글, 장시간 scan 동작 확인
+- 사용자 지정 이름 표시 확인(현재 테스트 Galaxy의 bonded device 목록은 0개라 모델명 fallback 상태)
 - AirPods 세대별 패킷 차이가 확인될 경우 parser 분리
 
 ## 4. 다음 작업 순서
@@ -86,8 +88,8 @@ Result: BUILD SUCCESSFUL
 - `app/build.gradle.kts`: Android/Compose 빌드 설정과 의존성
 - `app/src/main/AndroidManifest.xml`: BLE feature 및 버전별 권한
 - `app/src/main/java/com/example/podgauge/bluetooth/AirPodsScanner.kt`: BLE scan, Apple data 추출, 중복 제한, Debug Hex 로그
+- `app/src/main/java/com/example/podgauge/model/AirPodsBatteryState.kt`: 배터리 상태와 선택적 Bluetooth 기기명 모델
 - `app/src/main/java/com/example/podgauge/bluetooth/AirPodsParser.kt`: 패킷 판별과 보수적 parser 진입점
-- `app/src/main/java/com/example/podgauge/model/AirPodsBatteryState.kt`: 배터리 상태 모델
 - `app/src/main/java/com/example/podgauge/model/AirPodsModel.kt`: AirPods model enum
 - `app/src/main/java/com/example/podgauge/repository/AirPodsRepository.kt`: scanner StateFlow 전달
 - `app/src/main/java/com/example/podgauge/viewmodel/MainViewModel.kt`: UI용 상태 및 scan lifecycle 진입점

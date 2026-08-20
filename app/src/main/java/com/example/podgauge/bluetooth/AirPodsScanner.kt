@@ -119,6 +119,7 @@ class AirPodsScanner(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun handleResult(result: ScanResult) {
         val data = result.scanRecord?.getManufacturerSpecificData(APPLE_COMPANY_ID) ?: return
         if (BuildConfig.DEBUG) Log.d(TAG, "Apple packet:\n${data.toHexString()}")
@@ -127,14 +128,39 @@ class AirPodsScanner(private val context: Context) {
         if (BuildConfig.DEBUG) Log.d(TAG, "AirPods packet:\n${data.toHexString()}")
 
         val now = System.currentTimeMillis()
+        val deviceName = resolveDeviceName(result)
         val isDuplicate = lastPacket?.contentEquals(data) == true
-        if (isDuplicate && now - lastPublishedAt < DUPLICATE_REFRESH_MS) return
+        val hasNewName = deviceName != null && deviceName != _batteryState.value?.deviceName
+        if (isDuplicate && !hasNewName && now - lastPublishedAt < DUPLICATE_REFRESH_MS) return
 
         val parsed = parseAirPodsData(data) ?: return
         lastPacket = data.copyOf()
         lastPublishedAt = now
-        _batteryState.value = parsed.copy(timestamp = now)
+        _batteryState.value = parsed.copy(timestamp = now, deviceName = deviceName)
     }
+
+    @SuppressLint("MissingPermission")
+    private fun resolveDeviceName(result: ScanResult): String? {
+        if (!hasConnectPermission()) return null
+
+        return try {
+            result.scanRecord?.deviceName.cleanBluetoothName()
+                ?: result.device.aliasOrName().cleanBluetoothName()
+                ?: bluetoothAdapter?.bondedDevices
+                    ?.asSequence()
+                    ?.mapNotNull { it.aliasOrName().cleanBluetoothName() }
+                    ?.firstOrNull { it.contains(AIRPODS_NAME, ignoreCase = true) }
+        } catch (_: SecurityException) {
+            null
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION")
+    private fun android.bluetooth.BluetoothDevice.aliasOrName(): String? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) alias ?: name else name
+
+    private fun String?.cleanBluetoothName(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
 
     private fun hasScanPermission(): Boolean {
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -147,10 +173,18 @@ class AirPodsScanner(private val context: Context) {
         }
     }
 
+    private fun hasConnectPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            ) == PackageManager.PERMISSION_GRANTED
+
     private fun ByteArray.toHexString(): String = joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }
 
     private companion object {
         const val TAG = "PodGaugeScanner"
+        const val AIRPODS_NAME = "AirPods"
         const val APPLE_COMPANY_ID = 0x004C
         const val DUPLICATE_REFRESH_MS = 5_000L
     }
