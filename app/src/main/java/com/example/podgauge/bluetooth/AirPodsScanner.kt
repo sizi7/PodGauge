@@ -74,8 +74,8 @@ class AirPodsScanner(private val context: Context) {
         val filter = ScanFilter.Builder()
             .setManufacturerData(
                 APPLE_COMPANY_ID,
-                byteArrayOf(0x07),
-                byteArrayOf(0xFF.toByte()),
+                byteArrayOf(),
+                byteArrayOf(),
             )
             .build()
         val settings = ScanSettings.Builder()
@@ -121,6 +121,7 @@ class AirPodsScanner(private val context: Context) {
 
     private fun handleResult(result: ScanResult) {
         val data = result.scanRecord?.getManufacturerSpecificData(APPLE_COMPANY_ID) ?: return
+        if (BuildConfig.DEBUG) Log.d(TAG, "Apple packet:\n${data.toHexString()}")
         if (!isAirPodsPacket(data)) return
 
         if (BuildConfig.DEBUG) Log.d(TAG, "AirPods packet:\n${data.toHexString()}")
@@ -136,12 +137,14 @@ class AirPodsScanner(private val context: Context) {
     }
 
     private fun hasScanPermission(): Boolean {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Manifest.permission.BLUETOOTH_SCAN
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            Manifest.permission.ACCESS_FINE_LOCATION
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        return permissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
     private fun ByteArray.toHexString(): String = joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }
